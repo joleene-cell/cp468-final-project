@@ -6,3 +6,4 @@ pytest>=7.4
 openai>=2.53
 backoff>=2.2
 tqdm>=4.66
+rouge-score>=0.1.2
