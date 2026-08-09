@@ -3,3 +3,6 @@ numpy>=1.24
 nltk>=3.8
 datasets>=2.14
 pytest>=7.4
+openai>=2.53
+backoff>=2.2
+tqdm>=4.66
