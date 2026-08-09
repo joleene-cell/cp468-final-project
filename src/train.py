@@ -71,7 +71,12 @@ def main():
 
     set_seed(42)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        device = torch.device('cuda') # NVIDIA
+    elif torch.backends.mps.is_available():
+        device = torch.device('mps')  # Apple Silicon (M1/M2/M3) GPU acceleration
+    else:
+        device = torch.device('cpu')
 
     print(f"Using device: {device}")
 
@@ -109,6 +114,7 @@ def main():
     best_valid_loss = float('inf')
 
     print("Starting Training Loop...")
+    training_start_time = time.time()
 
     for epoch in range(N_EPOCHS):
         
@@ -130,6 +136,20 @@ def main():
         print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs:.2f}s | TF Ratio: {teacher_forcing_ratio:.2f}')
         print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
         print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+
+    # --- Summary for the report's Settings table ---
+    total_training_time = time.time() - training_start_time
+    total_mins, total_secs = divmod(total_training_time, 60)
+    print("\n" + "="*50)
+    print("TRAINING SUMMARY")
+    print("="*50)
+    print(f"Total trainable parameters: {count_parameters(model):,}")
+    print(f"Total training time: {int(total_mins)}m {total_secs:.1f}s "
+        f"({total_training_time/3600:.3f} hours)")
+    print(f"Hardware used: {device}")
+    print(f"Epochs: {N_EPOCHS}")
+    print(f"Best validation loss: {best_valid_loss:.4f} (PPL: {math.exp(best_valid_loss):.3f})")
+    print("="*50)
 
 if __name__ == "__main__":
     main()

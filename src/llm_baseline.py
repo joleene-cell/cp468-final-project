@@ -1,13 +1,11 @@
 import os
 import time
 import json
-import backoff
 from tqdm import tqdm
-from openai import OpenAI, RateLimitError, APIError
+import ollama
 from preprocess import prepare_multi30k_loaders
 
-# Initialize OpenAI client (ensure OPENAI_API_KEY is in your environment)
-client = OpenAI()
+MODEL_NAME = "llama3.1:8b"
 
 # --- Prompt Definitions ---
 # Variant 1: Direct and simple instruction
@@ -37,24 +35,23 @@ def format_prompt(english_text: str, variant: int, k: int) -> list:
     messages.append({"role": "user", "content": english_text})
     return messages
 
-@backoff.on_exception(backoff.expo, (RateLimitError, APIError), max_tries=5)
-def call_llm(messages: list, model: str = "gpt-4o-mini"):
-    """Calls the LLM API with exponential backoff for rate limits."""
+def call_llm(messages: list, model: str = MODEL_NAME):
+    """Calls the locally-running Ollama model. No rate limits to back off from
+    since this isn't a shared API -- retries aren't needed the same way."""
     start_time = time.time()
-    response = client.chat.completions.create(
+    response = ollama.chat(
         model=model,
         messages=messages,
-        temperature=0.1, # Low temperature for consistent translation
-        max_tokens=60
+        options={"temperature": 0.1, "num_predict": 60},  # num_predict mirrors max_tokens
     )
     latency = time.time() - start_time
-    
-    # Extract usage and response
-    translation = response.choices[0].message.content.strip()
-    usage = response.usage
-    return translation, latency, usage.prompt_tokens, usage.completion_tokens
 
-def run_evaluation(test_data: list, model_name: str = "gpt-4o-mini"):
+    translation = response["message"]["content"].strip()
+    prompt_tokens = response.get("prompt_eval_count", 0)
+    completion_tokens = response.get("eval_count", 0)
+    return translation, latency, prompt_tokens, completion_tokens
+
+def run_evaluation(test_data: list, model_name: str = MODEL_NAME):
     """Runs the full evaluation suite across prompt variants and shot configurations."""
     results = []
     
